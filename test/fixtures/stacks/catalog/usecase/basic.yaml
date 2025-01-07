@@ -1,0 +1,9 @@
+components:
+  terraform:
+    alb/basic:
+      metadata:
+        component: alb
+      vars:
+        enabled: true
+        https_ssl_policy: ELBSecurityPolicy-FS-1-2-Res-2020-10
+        health_check_path: /api/healthz
