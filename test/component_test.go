@@ -95,6 +95,7 @@ func TestComponent(t *testing.T) {
 		})
 
 		suite.Test(t, "acm", func(t *testing.T, atm *helper.Atmos) {
+			defer atm.GetAndDestroy("alb/acm", "default-test", map[string]interface{}{})
 			component := atm.GetAndDeploy("alb/acm", "default-test", map[string]interface{}{})
 			assert.NotNil(t, component)
 
