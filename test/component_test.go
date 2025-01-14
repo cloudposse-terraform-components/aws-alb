@@ -90,6 +90,7 @@ func TestComponent(t *testing.T) {
 		// Test phase: Validate the functionality of the ALB component
 		suite.Test(t, "basic", func(t *testing.T, atm *helper.Atmos) {
 			t.Skip("There is a bug - ALB Component can not get ACM certificate of the current version delegated DNS component")
+			defer atm.GetAndDestroy("alb/basic", "default-test", map[string]interface{}{})
 			component := atm.GetAndDeploy("alb/basic", "default-test", map[string]interface{}{})
 			assert.NotNil(t, component)
 		})
