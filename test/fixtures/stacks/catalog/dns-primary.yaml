@@ -3,7 +3,7 @@ components:
     dns-primary:
       metadata:
         component: dns-primary
-      vars: 
+      vars:
         domain_names:
           - example.net
         record_config: []
