@@ -6,3 +6,4 @@ import:
   - catalog/acm
   - catalog/usecase/basic
   - catalog/usecase/acm
+  - catalog/usecase/disabled

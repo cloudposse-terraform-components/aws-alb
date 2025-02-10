@@ -2,7 +2,7 @@ components:
   terraform:
     alb/basic:
       metadata:
-        component: alb
+        component: target
       vars:
         enabled: true
         https_ssl_policy: ELBSecurityPolicy-FS-1-2-Res-2020-10

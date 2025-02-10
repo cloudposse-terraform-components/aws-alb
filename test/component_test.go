@@ -8,162 +8,131 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/cloudposse/test-helpers/pkg/atmos"
-	helper "github.com/cloudposse/test-helpers/pkg/atmos/aws-component-helper"
+	helper "github.com/cloudposse/test-helpers/pkg/atmos/component-helper"
+	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-type validationOption struct {
-	DomainName          string `json:"domain_name"`
-	ResourceRecordName  string `json:"resource_record_name"`
-	ResourceRecordType  string `json:"resource_record_type"`
-	ResourceRecordValue string `json:"resource_record_value"`
+type ComponentSuite struct {
+	helper.TestSuite
 }
 
-type zone struct {
-	Arn               string            `json:"arn"`
-	Comment           string            `json:"comment"`
-	DelegationSetId   string            `json:"delegation_set_id"`
-	ForceDestroy      bool              `json:"force_destroy"`
-	Id                string            `json:"id"`
-	Name              string            `json:"name"`
-	NameServers       []string          `json:"name_servers"`
-	PrimaryNameServer string            `json:"primary_name_server"`
-	Tags              map[string]string `json:"tags"`
-	TagsAll           map[string]string `json:"tags_all"`
-	Vpc               []struct {
-		ID     string `json:"vpc_id"`
-		Region string `json:"vpc_region"`
-	} `json:"vpc"`
-	ZoneID string `json:"zone_id"`
+func (s *ComponentSuite) TestBasic() {
+	const component = "alb/basic"
+	const stack = "default-test"
+	const awsRegion = "us-east-2"
+
+	s.T().Skip("There is a bug - ALB Component can not get ACM certificate of the current version delegated DNS component. Read more https://github.com/cloudposse-terraform-components/aws-alb/issues/16")
+	defer s.DestroyAtmosComponent(s.T(), component, stack, nil)
+	options, _ := s.DeployAtmosComponent(s.T(), component, stack, nil)
+	assert.NotNil(s.T(), options)
 }
 
-func TestComponent(t *testing.T) {
-	// Define the AWS region to use for the tests
-	awsRegion := "us-east-2"
+func (s *ComponentSuite) TestAcm() {
+	const component = "alb/acm"
+	const stack = "default-test"
+	const awsRegion = "us-east-2"
 
-	// Initialize the test fixture
-	fixture := helper.NewFixture(t, "../", awsRegion, "test/fixtures")
+	defer s.DestroyAtmosComponent(s.T(), component, stack, nil)
+	options, _ := s.DeployAtmosComponent(s.T(), component, stack, nil)
 
-	// Ensure teardown is executed after the test
-	defer fixture.TearDown()
-	fixture.SetUp(&atmos.Options{})
+	assert.NotNil(s.T(), options)
 
-	// Define the test suite
-	fixture.Suite("default", func(t *testing.T, suite *helper.Suite) {
-		suite.AddDependency("vpc", "default-test")
+	alb_name := atmos.Output(s.T(), options, "alb_name")
+	alb_arn := atmos.Output(s.T(), options, "alb_arn")
+	alb_arn_suffix := atmos.Output(s.T(), options, "alb_arn_suffix")
 
-		// Setup phase: Create DNS zones for testing
-		suite.Setup(t, func(t *testing.T, atm *helper.Atmos) {
-			basicDomain := "components.cptest.test-automation.app"
+	assert.True(s.T(), strings.HasPrefix(alb_arn_suffix, fmt.Sprintf("app/%s", alb_name)))
 
-			// Deploy the delegated DNS zone
-			inputs := map[string]interface{}{
-				"zone_config": []map[string]interface{}{
-					{
-						"subdomain": suite.GetRandomIdentifier(),
-						"zone_name": basicDomain,
-					},
-				},
-			}
-			atm.GetAndDeploy("dns-delegated", "default-test", inputs)
-			atm.GetAndDeploy("acm", "default-test", map[string]interface{}{})
-		})
+	awsAccountId := aws.GetAccountId(s.T())
 
-		// Teardown phase: Destroy the DNS zones created during setup
-		suite.TearDown(t, func(t *testing.T, atm *helper.Atmos) {
-			atm.GetAndDestroy("acm", "default-test", map[string]interface{}{})
+	expectedArn := fmt.Sprintf("arn:aws:elasticloadbalancing:%s:%s:loadbalancer/%s", awsRegion, awsAccountId, alb_arn_suffix)
+	assert.Equal(s.T(), expectedArn, alb_arn)
 
-			// Deploy the delegated DNS zone
-			inputs := map[string]interface{}{
-				"zone_config": []map[string]interface{}{
-					{
-						"subdomain": suite.GetRandomIdentifier(),
-						"zone_name": "components.cptest.test-automation.app",
-					},
-				},
-			}
-			atm.GetAndDestroy("dns-delegated", "default-test", inputs)
-		})
+	client := NewElbV2Client(s.T(), awsRegion)
 
-		// Test phase: Validate the functionality of the ALB component
-		suite.Test(t, "basic", func(t *testing.T, atm *helper.Atmos) {
-			t.Skip("There is a bug - ALB Component can not get ACM certificate of the current version delegated DNS component. Read more https://github.com/cloudposse-terraform-components/aws-alb/issues/16")
-			defer atm.GetAndDestroy("alb/basic", "default-test", map[string]interface{}{})
-			component := atm.GetAndDeploy("alb/basic", "default-test", map[string]interface{}{})
-			assert.NotNil(t, component)
-		})
-
-		suite.Test(t, "acm", func(t *testing.T, atm *helper.Atmos) {
-			defer atm.GetAndDestroy("alb/acm", "default-test", map[string]interface{}{})
-			component := atm.GetAndDeploy("alb/acm", "default-test", map[string]interface{}{})
-			assert.NotNil(t, component)
-
-			alb_name := atm.Output(component, "alb_name")
-			alb_arn := atm.Output(component, "alb_arn")
-			alb_arn_suffix := atm.Output(component, "alb_arn_suffix")
-
-			assert.True(t, strings.HasPrefix(alb_arn_suffix, fmt.Sprintf("app/%s", alb_name)))
-
-			expectedArn := fmt.Sprintf("arn:aws:elasticloadbalancing:%s:%s:loadbalancer/%s", awsRegion, fixture.AwsAccountId, alb_arn_suffix)
-			assert.Equal(t, expectedArn, alb_arn)
-
-			client := NewElbV2Client(t, awsRegion)
-
-			loadBalancers, err := client.DescribeLoadBalancers(context.Background(), &elasticloadbalancingv2.DescribeLoadBalancersInput{
-				LoadBalancerArns: []string{alb_arn},
-			})
-			assert.NoError(t, err)
-
-			loadBalancer := loadBalancers.LoadBalancers[0]
-
-			alb_dns_name := atm.Output(component, "alb_dns_name")
-			assert.Equal(t, *loadBalancer.DNSName, alb_dns_name)
-
-			alb_zone_id := atm.Output(component, "alb_zone_id")
-			assert.Equal(t, *loadBalancer.CanonicalHostedZoneId, alb_zone_id)
-
-			security_group_id := atm.Output(component, "security_group_id")
-			assert.Equal(t, loadBalancer.SecurityGroups[0], security_group_id)
-
-			targetGroups, err := client.DescribeTargetGroups(context.Background(), &elasticloadbalancingv2.DescribeTargetGroupsInput{
-				LoadBalancerArn: &alb_arn,
-			})
-			assert.NoError(t, err)
-
-			targetGroup := targetGroups.TargetGroups[0]
-
-			default_target_group_arn := atm.Output(component, "default_target_group_arn")
-			assert.Equal(t, *targetGroup.TargetGroupArn, default_target_group_arn)
-
-			listener_arns := atm.OutputList(component, "listener_arns")
-			assert.Equal(t, 2, len(listener_arns))
-
-			listeners, err := client.DescribeListeners(context.Background(), &elasticloadbalancingv2.DescribeListenersInput{LoadBalancerArn: &alb_arn})
-			assert.NoError(t, err)
-
-			assert.Equal(t, 2, len(listeners.Listeners))
-
-			http_redirect_listener_arn := atm.Output(component, "http_redirect_listener_arn")
-			https_listener_arn := atm.Output(component, "https_listener_arn")
-
-			for _, listener := range listeners.Listeners {
-				if *listener.Port == 443 {
-					assert.Equal(t, *listener.ListenerArn, https_listener_arn)
-					assert.EqualValues(t, "HTTPS", listener.Protocol)
-				} else {
-					assert.Equal(t, *listener.ListenerArn, http_redirect_listener_arn)
-					assert.EqualValues(t, "HTTP", listener.Protocol)
-				}
-				assert.Contains(t, listener_arns, *listener.ListenerArn)
-			}
-
-			access_logs_bucket_id := atm.Output(component, "access_logs_bucket_id")
-			assert.Equal(t, "", access_logs_bucket_id)
-		})
+	loadBalancers, err := client.DescribeLoadBalancers(context.Background(), &elasticloadbalancingv2.DescribeLoadBalancersInput{
+		LoadBalancerArns: []string{alb_arn},
 	})
+	assert.NoError(s.T(), err)
+
+	loadBalancer := loadBalancers.LoadBalancers[0]
+
+	alb_dns_name := atmos.Output(s.T(), options, "alb_dns_name")
+	assert.Equal(s.T(), *loadBalancer.DNSName, alb_dns_name)
+
+	alb_zone_id := atmos.Output(s.T(), options, "alb_zone_id")
+	assert.Equal(s.T(), *loadBalancer.CanonicalHostedZoneId, alb_zone_id)
+
+	security_group_id := atmos.Output(s.T(), options, "security_group_id")
+	assert.Equal(s.T(), loadBalancer.SecurityGroups[0], security_group_id)
+
+	targetGroups, err := client.DescribeTargetGroups(context.Background(), &elasticloadbalancingv2.DescribeTargetGroupsInput{
+		LoadBalancerArn: &alb_arn,
+	})
+	assert.NoError(s.T(), err)
+
+	targetGroup := targetGroups.TargetGroups[0]
+
+	default_target_group_arn := atmos.Output(s.T(), options, "default_target_group_arn")
+	assert.Equal(s.T(), *targetGroup.TargetGroupArn, default_target_group_arn)
+
+	listener_arns := atmos.OutputList(s.T(), options, "listener_arns")
+	assert.Equal(s.T(), 2, len(listener_arns))
+
+	listeners, err := client.DescribeListeners(context.Background(), &elasticloadbalancingv2.DescribeListenersInput{LoadBalancerArn: &alb_arn})
+	assert.NoError(s.T(), err)
+
+	assert.Equal(s.T(), 2, len(listeners.Listeners))
+
+	http_redirect_listener_arn := atmos.Output(s.T(), options, "http_redirect_listener_arn")
+	https_listener_arn := atmos.Output(s.T(), options, "https_listener_arn")
+
+	for _, listener := range listeners.Listeners {
+		if *listener.Port == 443 {
+			assert.Equal(s.T(), *listener.ListenerArn, https_listener_arn)
+			assert.EqualValues(s.T(), "HTTPS", listener.Protocol)
+		} else {
+			assert.Equal(s.T(), *listener.ListenerArn, http_redirect_listener_arn)
+			assert.EqualValues(s.T(), "HTTP", listener.Protocol)
+		}
+		assert.Contains(s.T(), listener_arns, *listener.ListenerArn)
+	}
+
+	access_logs_bucket_id := atmos.Output(s.T(), options, "access_logs_bucket_id")
+	assert.Equal(s.T(), "", access_logs_bucket_id)
+
 }
+
+
+func (s *ComponentSuite) TestEnabledFlag() {
+	s.T().Skip("Skipping disabled ALB test")
+	const component = "alb/disabled"
+	const stack = "default-test"
+	s.VerifyEnabledFlag(component, stack, nil)
+}
+
+func TestRunSuite(t *testing.T) {
+	suite := new(ComponentSuite)
+
+	suite.AddDependency(t, "vpc", "default-test", nil)
+
+	subdomain := strings.ToLower(random.UniqueId())
+	inputs := map[string]interface{}{
+		"zone_config": []map[string]interface{}{
+			{
+				"subdomain": subdomain,
+				"zone_name": "components.cptest.test-automation.app",
+			},
+		},
+	}
+	suite.AddDependency(t, "dns-delegated", "default-test", &inputs)
+	suite.AddDependency(t, "acm", "default-test", nil)
+	helper.Run(t, suite)
+}
+
 
 // NewElbV2Client creates en ELB client.
 func NewElbV2Client(t *testing.T, region string) *elasticloadbalancingv2.Client {
