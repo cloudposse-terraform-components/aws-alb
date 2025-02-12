@@ -9,10 +9,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/cloudposse/test-helpers/pkg/atmos"
 	helper "github.com/cloudposse/test-helpers/pkg/atmos/component-helper"
+	awshelper "github.com/cloudposse/test-helpers/pkg/aws"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/aws"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type ComponentSuite struct {
@@ -28,6 +28,8 @@ func (s *ComponentSuite) TestBasic() {
 	defer s.DestroyAtmosComponent(s.T(), component, stack, nil)
 	options, _ := s.DeployAtmosComponent(s.T(), component, stack, nil)
 	assert.NotNil(s.T(), options)
+
+	s.DriftTest(component, stack, nil)
 }
 
 func (s *ComponentSuite) TestAcm() {
@@ -51,7 +53,7 @@ func (s *ComponentSuite) TestAcm() {
 	expectedArn := fmt.Sprintf("arn:aws:elasticloadbalancing:%s:%s:loadbalancer/%s", awsRegion, awsAccountId, alb_arn_suffix)
 	assert.Equal(s.T(), expectedArn, alb_arn)
 
-	client := NewElbV2Client(s.T(), awsRegion)
+	client := awshelper.NewElbV2Client(s.T(), awsRegion)
 
 	loadBalancers, err := client.DescribeLoadBalancers(context.Background(), &elasticloadbalancingv2.DescribeLoadBalancersInput{
 		LoadBalancerArns: []string{alb_arn},
@@ -104,11 +106,12 @@ func (s *ComponentSuite) TestAcm() {
 	access_logs_bucket_id := atmos.Output(s.T(), options, "access_logs_bucket_id")
 	assert.Equal(s.T(), "", access_logs_bucket_id)
 
+	s.DriftTest(component, stack, nil)
+
 }
 
 
 func (s *ComponentSuite) TestEnabledFlag() {
-	s.T().Skip("Skipping disabled ALB test")
 	const component = "alb/disabled"
 	const stack = "default-test"
 	s.VerifyEnabledFlag(component, stack, nil)
@@ -131,22 +134,4 @@ func TestRunSuite(t *testing.T) {
 	suite.AddDependency(t, "dns-delegated", "default-test", &inputs)
 	suite.AddDependency(t, "acm", "default-test", nil)
 	helper.Run(t, suite)
-}
-
-
-// NewElbV2Client creates en ELB client.
-func NewElbV2Client(t *testing.T, region string) *elasticloadbalancingv2.Client {
-	client, err := NewElbV2ClientE(t, region)
-	require.NoError(t, err)
-
-	return client
-}
-
-// NewElbV2ClientE creates an ELB client.
-func NewElbV2ClientE(t *testing.T, region string) (*elasticloadbalancingv2.Client, error) {
-	sess, err := aws.NewAuthenticatedSession(region)
-	if err != nil {
-		return nil, err
-	}
-	return elasticloadbalancingv2.NewFromConfig(*sess), nil
 }
