@@ -3,7 +3,7 @@ module test
 go 1.23.0
 
 require (
-	github.com/cloudposse/test-helpers v0.15.1-0.20250212122518-eb39e90ffb18
+	github.com/cloudposse/test-helpers v0.16.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/gruntwork-io/terratest v0.48.2
 	github.com/mattn/go-zglob v0.0.6 // indirect
@@ -11,8 +11,6 @@ require (
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-// replace github.com/cloudposse/test-helpers => /Users/goruha/projects/cloudposse/current/cloudposse-terraform-components/test-helpers
 
 // replace github.com/rebuy-de/aws-nuke/v2/mocks => github.com/ekristen/aws-nuke/v3/ v3.29.0
 
@@ -34,6 +32,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.2 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.32 // indirect
 	github.com/aws/aws-sdk-go-v2/service/acm v1.30.18 // indirect
+	github.com/aws/aws-sdk-go-v2/service/amplify v1.28.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/autoscaling v1.51.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.45.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.40.1 // indirect
@@ -85,7 +84,6 @@ require (
 	github.com/jackc/pgx/v5 v5.7.2 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jinzhu/copier v0.4.0 // indirect
-	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/compress v1.17.2 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
