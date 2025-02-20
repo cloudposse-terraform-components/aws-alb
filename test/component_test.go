@@ -76,8 +76,10 @@ func (s *ComponentSuite) TestAcm() {
 	})
 	assert.NoError(s.T(), err)
 
+	if len(targetGroups.TargetGroups) == 0 {
+		s.T().Fatal("No target groups found")
+	}
 	targetGroup := targetGroups.TargetGroups[0]
-
 	default_target_group_arn := atmos.Output(s.T(), options, "default_target_group_arn")
 	assert.Equal(s.T(), *targetGroup.TargetGroupArn, default_target_group_arn)
 
