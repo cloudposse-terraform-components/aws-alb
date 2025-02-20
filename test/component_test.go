@@ -60,8 +60,10 @@ func (s *ComponentSuite) TestAcm() {
 	})
 	assert.NoError(s.T(), err)
 
+	if len(loadBalancers.LoadBalancers) == 0 {
+		s.T().Fatal("No load balancers found")
+	}
 	loadBalancer := loadBalancers.LoadBalancers[0]
-
 	alb_dns_name := atmos.Output(s.T(), options, "alb_dns_name")
 	assert.Equal(s.T(), *loadBalancer.DNSName, alb_dns_name)
 
