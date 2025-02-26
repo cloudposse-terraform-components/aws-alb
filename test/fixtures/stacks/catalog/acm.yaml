@@ -5,7 +5,7 @@ components:
         component: acm
       vars:
         enabled: true
-        domain_name: '{{ (atmos.Component "dns-delegated" "default-test").outputs.default_domain_name }}'
+        domain_name: !terraform.output dns-delegated default-test .default_domain_name
         process_domain_validation_options: true
         validation_method: DNS
         # NOTE: The following subject alternative name is automatically added by the module.
