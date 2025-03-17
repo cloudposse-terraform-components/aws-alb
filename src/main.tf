@@ -50,6 +50,7 @@ module "alb" {
   target_group_target_type                = var.target_group_target_type
   stickiness                              = var.stickiness
   lifecycle_rule_enabled                  = var.lifecycle_rule_enabled
+  drop_invalid_header_fields              = var.drop_invalid_header_fields
 
   context = module.this.context
 }
