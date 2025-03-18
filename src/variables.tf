@@ -239,3 +239,9 @@ variable "dns_acm_enabled" {
   default     = false
   description = "If `true`, use the ACM ARN created by the given `dns-delegated` component. Otherwise, use the ACM ARN created by the given `acm` component."
 }
+
+variable "drop_invalid_header_fields" {
+  type        = bool
+  default     = false
+  description = "Indicates whether HTTP headers with header fields that are not valid are removed by the load balancer (true) or routed to targets (false)."
+}
