@@ -24,9 +24,9 @@ usage: |-
   <!-- prettier-ignore-end -->
 
 references:
-  - name: cloudposse/terraform-aws-components (alb)
+  - name: cloudposse-terraform-components
     description: Cloud Posse's upstream component
-    url: https://github.com/cloudposse/terraform-aws-components/tree/main/modules/alb
+    url: https://github.com/orgs/cloudposse-terraform-components/repositories
 tags:
   - component/alb
   - layer/ecs
