@@ -143,7 +143,7 @@ No resources.
 ## References
 
 
-- [cloudposse/terraform-aws-components (alb)](https://github.com/cloudposse/terraform-aws-components/tree/main/modules/alb) - Cloud Posse's upstream component
+- [cloudposse-terraform-components](https://github.com/orgs/cloudposse-terraform-components/repositories) - Cloud Posse's upstream component
 
 
 
