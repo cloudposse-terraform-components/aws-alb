@@ -10,7 +10,7 @@ locals {
 
 module "alb" {
   source  = "cloudposse/alb/aws"
-  version = "2.3.1"
+  version = "2.4.0"
 
   vpc_id          = module.vpc.outputs.vpc_id
   subnet_ids      = module.vpc.outputs.public_subnet_ids
