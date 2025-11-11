@@ -5,7 +5,7 @@ locals {
   dns_delegated_certificate_obj     = lookup(local.dns_delegated_certificate, local.dns_delegated_default_domain_name, {})
   dns_delegated_certificate_arn     = lookup(local.dns_delegated_certificate_obj, "arn", "")
 
-  certificate_arn = var.dns_acm_enabled ? module.acm.outputs.arn : local.dns_delegated_certificate_arn
+  certificate_arn = module.this.enabled && var.dns_acm_enabled ? module.acm.outputs.arn : local.dns_delegated_certificate_arn
 }
 
 module "alb" {

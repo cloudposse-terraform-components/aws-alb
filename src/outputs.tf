@@ -57,3 +57,8 @@ output "access_logs_bucket_id" {
   description = "The S3 bucket ID for access logs"
   value       = module.alb.access_logs_bucket_id
 }
+
+output "certificate_arn" {
+  description = "SSL certificate ARN to use with the ALB"
+  value       = local.certificate_arn
+}
