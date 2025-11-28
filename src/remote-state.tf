@@ -7,12 +7,16 @@ module "vpc" {
   context = module.this.context
 }
 
+locals {
+  global_environment_name = var.account_map_enabled ? module.iam_roles.global_environment_name : module.this.context.environment
+}
+
 module "dns_delegated" {
   source  = "cloudposse/stack-config/yaml//modules/remote-state"
   version = "1.8.0"
 
   component   = var.dns_delegated_component_name
-  environment = coalesce(var.dns_delegated_environment_name, module.iam_roles.global_environment_name)
+  environment = coalesce(var.dns_delegated_environment_name, local.global_environment_name)
 
   bypass = var.dns_acm_enabled
 
@@ -26,7 +30,6 @@ module "dns_delegated" {
 
   context = module.this.context
 }
-
 module "acm" {
   source  = "cloudposse/stack-config/yaml//modules/remote-state"
   version = "1.8.0"
