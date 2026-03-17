@@ -124,17 +124,22 @@ func TestRunSuite(t *testing.T) {
 
 	suite.AddDependency(t, "vpc", "default-test", nil)
 
+	primaryDomain := fmt.Sprintf("%s.cptest.test-automation.app", strings.ToLower(random.UniqueId()))
+	primaryInputs := map[string]any{
+		"domain_names": []string{primaryDomain},
+	}
+	suite.AddDependency(t, "dns-primary", "default-test", &primaryInputs)
+
 	subdomain := strings.ToLower(random.UniqueId())
-	inputs := map[string]any{
+	delegatedInputs := map[string]any{
 		"zone_config": []map[string]any{
 			{
 				"subdomain": subdomain,
-				"zone_name": "components.cptest.test-automation.app",
+				"zone_name": primaryDomain,
 			},
 		},
 	}
-	suite.AddDependency(t, "dns-primary", "default-test", nil)
-	suite.AddDependency(t, "dns-delegated", "default-test", &inputs)
+	suite.AddDependency(t, "dns-delegated", "default-test", &delegatedInputs)
 	suite.AddDependency(t, "acm", "default-test", nil)
 	helper.Run(t, suite)
 }
