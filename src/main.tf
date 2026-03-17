@@ -10,7 +10,7 @@ locals {
 
 module "alb" {
   source  = "cloudposse/alb/aws"
-  version = "2.4.0"
+  version = "2.5.0"
 
   vpc_id          = module.vpc.outputs.vpc_id
   subnet_ids      = module.vpc.outputs.public_subnet_ids
@@ -51,6 +51,7 @@ module "alb" {
   stickiness                              = var.stickiness
   lifecycle_rule_enabled                  = var.lifecycle_rule_enabled
   drop_invalid_header_fields              = var.drop_invalid_header_fields
+  desync_mitigation_mode                  = var.desync_mitigation_mode
 
   context = module.this.context
 }
