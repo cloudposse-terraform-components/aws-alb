@@ -62,14 +62,16 @@ data "aws_route53_zone" "records" {
   private_zone = false
 }
 
-module "route53_alias" {
-  source  = "cloudposse/route53-alias/aws"
-  version = "0.13.0"
+resource "aws_route53_record" "alias" {
+  for_each = module.this.enabled && length(var.route53_record_names) > 0 ? toset(var.route53_record_names) : toset([])
 
-  count = module.this.enabled && length(var.route53_record_names) > 0 ? 1 : 0
+  zone_id = one(data.aws_route53_zone.records[*].zone_id)
+  name    = each.value
+  type    = "A"
 
-  aliases         = var.route53_record_names
-  parent_zone_id  = one(data.aws_route53_zone.records[*].zone_id)
-  target_dns_name = module.alb.alb_dns_name
-  target_zone_id  = module.alb.alb_zone_id
+  alias {
+    name                   = module.alb.alb_dns_name
+    zone_id                = module.alb.alb_zone_id
+    evaluate_target_health = false
+  }
 }
