@@ -54,3 +54,22 @@ module "alb" {
 
   context = module.this.context
 }
+
+data "aws_route53_zone" "records" {
+  count = module.this.enabled && length(var.route53_record_names) > 0 ? 1 : 0
+
+  name         = var.route53_zone_name
+  private_zone = false
+}
+
+module "route53_alias" {
+  source  = "cloudposse/route53-alias/aws"
+  version = "0.13.0"
+
+  count = module.this.enabled && length(var.route53_record_names) > 0 ? 1 : 0
+
+  aliases         = var.route53_record_names
+  parent_zone_id  = one(data.aws_route53_zone.records[*].zone_id)
+  target_dns_name = module.alb.alb_dns_name
+  target_zone_id  = module.alb.alb_zone_id
+}
