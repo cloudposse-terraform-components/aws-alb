@@ -59,7 +59,7 @@ data "aws_route53_zone" "records" {
   count = module.this.enabled && length(var.route53_record_names) > 0 ? 1 : 0
 
   name         = var.route53_zone_name
-  private_zone = false
+  private_zone = var.internal
 }
 
 resource "aws_route53_record" "alias" {
@@ -68,6 +68,13 @@ resource "aws_route53_record" "alias" {
   zone_id = one(data.aws_route53_zone.records[*].zone_id)
   name    = each.value
   type    = "A"
+
+  lifecycle {
+    precondition {
+      condition     = var.route53_zone_name != null && var.route53_zone_name != ""
+      error_message = "route53_zone_name must be set when route53_record_names is non-empty."
+    }
+  }
 
   alias {
     name                   = module.alb.alb_dns_name
