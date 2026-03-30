@@ -53,14 +53,3 @@ spec:
         - "**/modules/**"
       excluded_paths: []
 
-    - component: "vpc"
-      source: github.com/cloudposse-terraform-components/aws-vpc.git//src?ref={{.Version}}
-      version: v2.1.2
-      targets:
-        - "components/terraform/vpc"
-      included_paths:
-        - "**/*.tf"
-        - "**/*.md"
-        - "**/*.tftmpl"
-        - "**/modules/**"
-      excluded_paths: []
