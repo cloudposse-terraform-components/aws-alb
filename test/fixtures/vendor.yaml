@@ -43,7 +43,7 @@ spec:
 
     - component: "acm"
       source: github.com/cloudposse-terraform-components/aws-acm.git//src?ref={{.Version}}
-      version: v2.0.0
+      version: v2.1.0
       targets:
         - "components/terraform/acm"
       included_paths:
