@@ -54,3 +54,31 @@ module "alb" {
 
   context = module.this.context
 }
+
+data "aws_route53_zone" "records" {
+  count = module.this.enabled && length(var.route53_record_names) > 0 ? 1 : 0
+
+  name         = var.route53_zone_name
+  private_zone = var.internal
+
+  lifecycle {
+    precondition {
+      condition     = var.route53_zone_name != null && var.route53_zone_name != ""
+      error_message = "route53_zone_name must be set when route53_record_names is non-empty."
+    }
+  }
+}
+
+resource "aws_route53_record" "alias" {
+  for_each = module.this.enabled && length(var.route53_record_names) > 0 ? toset(var.route53_record_names) : toset([])
+
+  zone_id = one(data.aws_route53_zone.records[*].zone_id)
+  name    = each.value
+  type    = "A"
+
+  alias {
+    name                   = module.alb.alb_dns_name
+    zone_id                = module.alb.alb_zone_id
+    evaluate_target_health = false
+  }
+}

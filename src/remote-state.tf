@@ -1,6 +1,6 @@
 module "vpc" {
   source  = "cloudposse/stack-config/yaml//modules/remote-state"
-  version = "1.8.0"
+  version = "2.0.0"
 
   component = var.vpc_component_name
 
@@ -13,7 +13,7 @@ locals {
 
 module "dns_delegated" {
   source  = "cloudposse/stack-config/yaml//modules/remote-state"
-  version = "1.8.0"
+  version = "2.0.0"
 
   component   = var.dns_delegated_component_name
   environment = coalesce(var.dns_delegated_environment_name, local.global_environment_name)
@@ -32,7 +32,7 @@ module "dns_delegated" {
 }
 module "acm" {
   source  = "cloudposse/stack-config/yaml//modules/remote-state"
-  version = "1.8.0"
+  version = "2.0.0"
 
   component = var.acm_component_name
 

@@ -245,3 +245,15 @@ variable "drop_invalid_header_fields" {
   default     = false
   description = "Indicates whether HTTP headers with header fields that are not valid are removed by the load balancer (true) or routed to targets (false)."
 }
+
+variable "route53_record_names" {
+  type        = list(string)
+  default     = []
+  description = "List of Route53 A ALIAS record names to create pointing to the ALB. When non-empty, `route53_zone_name` is required."
+}
+
+variable "route53_zone_name" {
+  type        = string
+  default     = null
+  description = "The name of the Route53 hosted zone in which to create alias records. Required when `route53_record_names` is non-empty."
+}
