@@ -257,3 +257,43 @@ variable "route53_zone_name" {
   default     = null
   description = "The name of the Route53 hosted zone in which to create alias records. Required when `route53_record_names` is non-empty."
 }
+
+variable "desync_mitigation_mode" {
+  type        = string
+  default     = "defensive"
+  description = "How the load balancer handles requests that might pose a security risk to an application due to HTTP desync. Valid values are `monitor`, `defensive` (default), `strictest`."
+
+  validation {
+    condition     = contains(["monitor", "defensive", "strictest"], var.desync_mitigation_mode)
+    error_message = "Allowed values: `monitor`, `defensive`, or `strictest`."
+  }
+}
+
+variable "health_check_protocol" {
+  type        = string
+  default     = null
+  description = "The protocol to use for the healthcheck. If not specified, same as the traffic protocol"
+}
+
+variable "load_balancing_algorithm_type" {
+  type        = string
+  default     = "round_robin"
+  description = "Determines how the load balancer selects targets when routing requests. Only applicable for Application Load Balancer Target Groups"
+}
+
+variable "default_target_group_enabled" {
+  type        = bool
+  default     = true
+  description = "Whether the default target group should be created or not."
+}
+
+variable "target_group_protocol_version" {
+  type        = string
+  default     = "HTTP1"
+  description = "The protocol version for the default target group. One of `HTTP1`, `HTTP2`, `GRPC`."
+
+  validation {
+    condition     = contains(["HTTP1", "HTTP2", "GRPC"], var.target_group_protocol_version)
+    error_message = "Allowed values: `HTTP1`, `HTTP2`, or `GRPC`."
+  }
+}
