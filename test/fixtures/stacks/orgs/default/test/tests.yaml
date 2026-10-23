@@ -6,5 +6,6 @@ import:
   - catalog/acm
   - catalog/usecase/basic
   - catalog/usecase/acm
+  - catalog/usecase/listeners
   - catalog/usecase/disabled
   - catalog/usecase/internal
