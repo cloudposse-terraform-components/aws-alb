@@ -20,6 +20,21 @@ usage: |-
           health_check_path: /api/healthz
   ```
 
+  ### Internal ALB in private subnets
+
+  The ALB is placed in the `vpc` component's public subnets by default. For an ALB reached only from inside the VPC
+  (for example registered as an `alb`-type target behind a Network Load Balancer), set `internal: true` and
+  `subnet_type: private`. Changing `subnet_type` replaces the ALB.
+
+  ```yaml
+  components:
+    terraform:
+      alb:
+        vars:
+          internal: true
+          subnet_type: private
+  ```
+
   <!-- prettier-ignore-start -->
   <!-- prettier-ignore-end -->
 
