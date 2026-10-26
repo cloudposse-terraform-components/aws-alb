@@ -13,7 +13,7 @@ module "alb" {
   version = "2.5.0"
 
   vpc_id          = module.vpc.outputs.vpc_id
-  subnet_ids      = module.vpc.outputs.public_subnet_ids
+  subnet_ids      = var.subnet_type == "private" ? module.vpc.outputs.private_subnet_ids : module.vpc.outputs.public_subnet_ids
   certificate_arn = local.certificate_arn
 
   internal                                = var.internal

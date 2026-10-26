@@ -7,3 +7,4 @@ import:
   - catalog/usecase/basic
   - catalog/usecase/acm
   - catalog/usecase/disabled
+  - catalog/usecase/internal
