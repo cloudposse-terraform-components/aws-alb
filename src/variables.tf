@@ -360,7 +360,7 @@ variable "listeners" {
   }
 
   validation {
-    condition     = alltrue([for l in values(var.listeners) : l.target_protocol == null || contains(["HTTP", "HTTPS"], l.target_protocol)])
+    condition     = alltrue([for l in values(var.listeners) : contains(["HTTP", "HTTPS"], coalesce(l.target_protocol, "HTTP"))])
     error_message = "listeners[*].target_protocol must be HTTP or HTTPS."
   }
 
