@@ -9,6 +9,21 @@ locals {
     } if length(listener.ingress_cidr_blocks) > 0
   }
 
+  # One rule per (listener, source security group), keyed "<listener>/<security group ID>".
+  # Null or empty IDs (e.g. a remote-state read of a group not created yet) are skipped.
+  listener_ingress_security_group_rules = {
+    for rule in flatten([
+      for key, listener in local.listeners : [
+        for security_group_id in listener.ingress_security_group_ids : {
+          key               = "${key}/${security_group_id}"
+          port              = listener.port
+          security_group_id = security_group_id
+          description       = "${key} listener (${listener.protocol} ${listener.port})"
+        } if security_group_id != null && security_group_id != ""
+      ]
+    ]) : rule.key => rule
+  }
+
   listener_target_attachments = {
     for attachment in flatten([
       for key, listener in local.listeners : [
@@ -100,4 +115,16 @@ resource "aws_security_group_rule" "listener_ingress" {
   protocol          = "tcp"
   cidr_blocks       = each.value.cidr_blocks
   description       = each.value.description
+}
+
+resource "aws_security_group_rule" "listener_ingress_security_group" {
+  for_each = local.listener_ingress_security_group_rules
+
+  type                     = "ingress"
+  security_group_id        = module.alb.security_group_id
+  from_port                = each.value.port
+  to_port                  = each.value.port
+  protocol                 = "tcp"
+  source_security_group_id = each.value.security_group_id
+  description              = each.value.description
 }

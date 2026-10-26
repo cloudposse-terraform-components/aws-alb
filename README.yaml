@@ -67,6 +67,18 @@ usage: |-
                 - id: i-0123456789abcdef0
   ```
 
+  `ingress_security_group_ids` opens a listener port to other security groups instead of (or as well as) CIDRs. Use it
+  when a Network Load Balancer with a security group forwards to this ALB through an `alb`-type target group: that
+  target group preserves the client IP, so a rule on the NLB subnet's CIDR would only admit health checks, while a rule
+  referencing the NLB's security group admits the client traffic too.
+
+  ```yaml
+          listeners:
+            app:
+              port: 8443
+              ingress_security_group_ids: ["sg-0123456789abcdef0"] # the NLB's security group
+  ```
+
   <!-- prettier-ignore-start -->
   <!-- prettier-ignore-end -->
 
