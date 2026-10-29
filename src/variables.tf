@@ -312,3 +312,65 @@ variable "target_group_protocol_version" {
     error_message = "Allowed values: `HTTP1`, `HTTP2`, or `GRPC`."
   }
 }
+
+variable "listeners" {
+  type = map(object({
+    port                       = number
+    protocol                   = optional(string, "HTTPS")
+    certificate_arn            = optional(string)
+    ssl_policy                 = optional(string)
+    target_port                = optional(number)
+    target_protocol            = optional(string)
+    target_protocol_version    = optional(string, "HTTP1")
+    target_type                = optional(string)
+    deregistration_delay       = optional(number)
+    ingress_cidr_blocks        = optional(list(string), [])
+    ingress_security_group_ids = optional(list(string), [])
+    health_check = optional(object({
+      enabled             = optional(bool, true)
+      path                = optional(string, "/")
+      port                = optional(string, "traffic-port")
+      protocol            = optional(string)
+      matcher             = optional(string, "200-399")
+      healthy_threshold   = optional(number, 2)
+      unhealthy_threshold = optional(number, 2)
+      interval            = optional(number, 15)
+      timeout             = optional(number, 10)
+    }), {})
+    targets = optional(list(object({
+      id   = string
+      port = optional(number)
+    })), [])
+  }))
+  default     = {}
+  description = <<-EOT
+    Additional listeners, keyed by name. Each key creates its own target group, listener and (when
+    `ingress_cidr_blocks` or `ingress_security_group_ids` is set) security group ingress rules on the ALB, so one ALB
+    can serve any number of ports.
+    - `port`, `protocol`: listener port and protocol (`HTTPS` or `HTTP`, default `HTTPS`).
+    - `certificate_arn`, `ssl_policy`: for `HTTPS` listeners; default to the component's certificate and `https_ssl_policy`.
+    - `target_port`, `target_protocol`, `target_protocol_version`: target group settings; port and protocol default to the listener's.
+    - `target_type`, `deregistration_delay`: default to `target_group_target_type` and `deregistration_delay`.
+    - `ingress_cidr_blocks`: CIDRs allowed to reach this listener on the ALB security group.
+    - `ingress_security_group_ids`: security groups allowed to reach this listener (one rule per group). For example the
+      security group of a Network Load Balancer that forwards to this ALB: an `alb`-type target group preserves the
+      client IP, so a rule referencing the NLB's security group admits both client traffic and health checks.
+    - `health_check`: target group health check; `protocol` defaults to the target protocol.
+    - `targets`: targets to register (`id` is an instance ID, IP address or Lambda ARN depending on `target_type`; `port` defaults to the target port).
+    EOT
+
+  validation {
+    condition     = alltrue([for l in values(var.listeners) : contains(["HTTP", "HTTPS"], l.protocol)])
+    error_message = "listeners[*].protocol must be HTTP or HTTPS."
+  }
+
+  validation {
+    condition     = alltrue([for l in values(var.listeners) : contains(["HTTP", "HTTPS"], coalesce(l.target_protocol, "HTTP"))])
+    error_message = "listeners[*].target_protocol must be HTTP or HTTPS."
+  }
+
+  validation {
+    condition     = length(distinct([for l in values(var.listeners) : l.port])) == length(var.listeners)
+    error_message = "listeners[*].port must be unique."
+  }
+}

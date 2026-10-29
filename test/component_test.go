@@ -114,6 +114,25 @@ func (s *ComponentSuite) TestAcm() {
 
 }
 
+func (s *ComponentSuite) TestListeners() {
+	const component = "alb/listeners"
+	const stack = "default-test"
+
+	defer s.DestroyAtmosComponent(s.T(), component, stack, nil)
+	options, _ := s.DeployAtmosComponent(s.T(), component, stack, nil)
+	assert.NotNil(s.T(), options)
+
+	listeners := map[string]map[string]interface{}{}
+	atmos.OutputStruct(s.T(), options, "listeners", &listeners)
+	assert.Len(s.T(), listeners, 2)
+	assert.EqualValues(s.T(), 8443, listeners["web"]["port"])
+	assert.Equal(s.T(), "HTTPS", listeners["web"]["protocol"])
+	assert.EqualValues(s.T(), 8080, listeners["admin"]["port"])
+	assert.Equal(s.T(), "HTTP", listeners["admin"]["protocol"])
+	assert.NotEmpty(s.T(), listeners["web"]["target_group_arn"])
+
+	s.DriftTest(component, stack, nil)
+}
 
 func (s *ComponentSuite) TestInternal() {
 	const component = "alb/internal"

@@ -35,6 +35,50 @@ usage: |-
           subnet_type: private
   ```
 
+  ### Multiple listeners
+
+  The default listeners serve one HTTP and one HTTPS port with one default target group. Use `listeners` to put any
+  number of ports on the same ALB. Each entry creates its own target group, listener and target attachments, and
+  `ingress_cidr_blocks` opens the port on the ALB security group. HTTPS listeners use the component's certificate
+  unless the entry sets `certificate_arn`.
+
+  ```yaml
+  components:
+    terraform:
+      alb:
+        vars:
+          http_enabled: false # only the listeners below
+          https_enabled: false
+          default_target_group_enabled: false
+          target_group_target_type: instance
+          listeners:
+            app:
+              port: 8443
+              target_protocol: HTTPS # the ALB does not validate target certificates
+              ingress_cidr_blocks: ["203.0.113.10/32"]
+              health_check:
+                path: /healthz
+              targets:
+                - id: i-0123456789abcdef0
+            admin:
+              port: 9443
+              ingress_cidr_blocks: ["203.0.113.10/32"]
+              targets:
+                - id: i-0123456789abcdef0
+  ```
+
+  `ingress_security_group_ids` opens a listener port to other security groups instead of (or as well as) CIDRs. Use it
+  when a Network Load Balancer with a security group forwards to this ALB through an `alb`-type target group: that
+  target group preserves the client IP, so a rule on the NLB subnet's CIDR would only admit health checks, while a rule
+  referencing the NLB's security group admits the client traffic too.
+
+  ```yaml
+          listeners:
+            app:
+              port: 8443
+              ingress_security_group_ids: ["sg-0123456789abcdef0"] # the NLB's security group
+  ```
+
   <!-- prettier-ignore-start -->
   <!-- prettier-ignore-end -->
 

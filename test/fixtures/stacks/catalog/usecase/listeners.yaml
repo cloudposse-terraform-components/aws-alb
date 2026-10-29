@@ -1,0 +1,27 @@
+components:
+  terraform:
+    alb/listeners:
+      metadata:
+        component: target
+      vars:
+        enabled: true
+        attributes:
+          - "listeners"
+        dns_acm_enabled: true
+        access_logs_enabled: false
+        dns_delegated_environment_name: "ue2"
+        # Only the listeners below; no default listeners or target group.
+        http_enabled: false
+        https_enabled: false
+        default_target_group_enabled: false
+        target_group_target_type: instance
+        listeners:
+          web:
+            port: 8443
+            ingress_cidr_blocks: ["10.0.0.0/8"]
+            health_check:
+              path: /healthz
+          admin:
+            port: 8080
+            protocol: HTTP
+            ingress_cidr_blocks: ["10.0.0.0/8"]
