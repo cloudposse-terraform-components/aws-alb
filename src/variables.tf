@@ -9,6 +9,21 @@ variable "internal" {
   description = "A boolean flag to determine whether the ALB should be internal"
 }
 
+variable "subnet_type" {
+  type        = string
+  default     = "public"
+  description = <<-EOT
+    Which subnets of the `vpc` component the ALB is placed in: `public` or `private`.
+    Use `private` together with `internal = true` for an ALB that is reached only from inside the VPC
+    (for example behind a Network Load Balancer). Changing this replaces the ALB.
+    EOT
+
+  validation {
+    condition     = contains(["public", "private"], var.subnet_type)
+    error_message = "subnet_type must be either \"public\" or \"private\"."
+  }
+}
+
 variable "http_port" {
   type        = number
   default     = 80

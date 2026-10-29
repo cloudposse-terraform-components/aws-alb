@@ -115,6 +115,40 @@ func (s *ComponentSuite) TestAcm() {
 }
 
 
+func (s *ComponentSuite) TestInternal() {
+	const component = "alb/internal"
+	const stack = "default-test"
+	const awsRegion = "us-east-2"
+
+	defer s.DestroyAtmosComponent(s.T(), component, stack, nil)
+	options, _ := s.DeployAtmosComponent(s.T(), component, stack, nil)
+	assert.NotNil(s.T(), options)
+
+	alb_arn := atmos.Output(s.T(), options, "alb_arn")
+
+	vpcOptions := s.GetAtmosOptions("vpc", stack, nil)
+	privateSubnetIds := atmos.OutputList(s.T(), vpcOptions, "private_subnet_ids")
+
+	client := awshelper.NewElbV2Client(s.T(), awsRegion)
+	loadBalancers, err := client.DescribeLoadBalancers(context.Background(), &elasticloadbalancingv2.DescribeLoadBalancersInput{
+		LoadBalancerArns: []string{alb_arn},
+	})
+	assert.NoError(s.T(), err)
+
+	if len(loadBalancers.LoadBalancers) == 0 {
+		s.T().Fatal("No load balancers found")
+	}
+	loadBalancer := loadBalancers.LoadBalancers[0]
+	assert.EqualValues(s.T(), "internal", loadBalancer.Scheme)
+
+	assert.Equal(s.T(), len(privateSubnetIds), len(loadBalancer.AvailabilityZones))
+	for _, az := range loadBalancer.AvailabilityZones {
+		assert.Contains(s.T(), privateSubnetIds, *az.SubnetId)
+	}
+
+	s.DriftTest(component, stack, nil)
+}
+
 func (s *ComponentSuite) TestEnabledFlag() {
 	const component = "alb/disabled"
 	const stack = "default-test"
