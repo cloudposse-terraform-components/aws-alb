@@ -79,6 +79,22 @@ usage: |-
               ingress_security_group_ids: ["sg-0123456789abcdef0"] # the NLB's security group
   ```
 
+  `listener_https_fixed_response` sets the HTTPS listener's default action to a fixed response instead of a forward.
+  With `default_target_group_enabled: false`, requests that match no listener rule get that response, so only rules
+  added by other components (for example host-header rules) reach a target.
+
+  ```yaml
+  components:
+    terraform:
+      alb:
+        vars:
+          default_target_group_enabled: false
+          listener_https_fixed_response:
+            content_type: text/plain
+            message_body: Not found
+            status_code: "404"
+  ```
+
   <!-- prettier-ignore-start -->
   <!-- prettier-ignore-end -->
 
