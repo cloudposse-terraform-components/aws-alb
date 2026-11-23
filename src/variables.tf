@@ -302,6 +302,21 @@ variable "default_target_group_enabled" {
   description = "Whether the default target group should be created or not."
 }
 
+variable "listener_https_fixed_response" {
+  type = object({
+    content_type = string
+    message_body = string
+    status_code  = string
+  })
+  default     = null
+  description = <<-EOT
+    Fixed response for the HTTPS listener's default action, for example
+    `{ content_type = "text/plain", message_body = "Not found", status_code = "404" }`.
+    Use it with `default_target_group_enabled: false` so that only listener rules added outside the component reach a
+    target. `null` (the default) keeps the forward to the default target group.
+    EOT
+}
+
 variable "target_group_protocol_version" {
   type        = string
   default     = "HTTP1"

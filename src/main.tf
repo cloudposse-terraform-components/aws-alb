@@ -56,6 +56,7 @@ module "alb" {
   health_check_protocol         = var.health_check_protocol
   load_balancing_algorithm_type = var.load_balancing_algorithm_type
   default_target_group_enabled  = var.default_target_group_enabled
+  listener_https_fixed_response = var.listener_https_fixed_response
   target_group_protocol_version = var.target_group_protocol_version
 
   context = module.this.context
