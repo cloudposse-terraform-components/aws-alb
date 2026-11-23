@@ -64,6 +64,81 @@ components:
         health_check_path: /api/healthz
 ```
 
+### Internal ALB in private subnets
+
+The ALB is placed in the `vpc` component's public subnets by default. For an ALB reached only from inside the VPC
+(for example registered as an `alb`-type target behind a Network Load Balancer), set `internal: true` and
+`subnet_type: private`. Changing `subnet_type` replaces the ALB.
+
+```yaml
+components:
+  terraform:
+    alb:
+      vars:
+        internal: true
+        subnet_type: private
+```
+
+### Multiple listeners
+
+The default listeners serve one HTTP and one HTTPS port with one default target group. Use `listeners` to put any
+number of ports on the same ALB. Each entry creates its own target group, listener and target attachments, and
+`ingress_cidr_blocks` opens the port on the ALB security group. HTTPS listeners use the component's certificate
+unless the entry sets `certificate_arn`.
+
+```yaml
+components:
+  terraform:
+    alb:
+      vars:
+        http_enabled: false # only the listeners below
+        https_enabled: false
+        default_target_group_enabled: false
+        target_group_target_type: instance
+        listeners:
+          app:
+            port: 8443
+            target_protocol: HTTPS # the ALB does not validate target certificates
+            ingress_cidr_blocks: ["203.0.113.10/32"]
+            health_check:
+              path: /healthz
+            targets:
+              - id: i-0123456789abcdef0
+          admin:
+            port: 9443
+            ingress_cidr_blocks: ["203.0.113.10/32"]
+            targets:
+              - id: i-0123456789abcdef0
+```
+
+`ingress_security_group_ids` opens a listener port to other security groups instead of (or as well as) CIDRs. Use it
+when a Network Load Balancer with a security group forwards to this ALB through an `alb`-type target group: that
+target group preserves the client IP, so a rule on the NLB subnet's CIDR would only admit health checks, while a rule
+referencing the NLB's security group admits the client traffic too.
+
+```yaml
+        listeners:
+          app:
+            port: 8443
+            ingress_security_group_ids: ["sg-0123456789abcdef0"] # the NLB's security group
+```
+
+`listener_https_fixed_response` sets the HTTPS listener's default action to a fixed response instead of a forward.
+With `default_target_group_enabled: false`, requests that match no listener rule get that response, so only rules
+added by other components (for example host-header rules) reach a target.
+
+```yaml
+components:
+  terraform:
+    alb:
+      vars:
+        default_target_group_enabled: false
+        listener_https_fixed_response:
+          content_type: text/plain
+          message_body: Not found
+          status_code: "404"
+```
+
 <!-- prettier-ignore-start -->
 <!-- prettier-ignore-end -->
 
@@ -84,39 +159,39 @@ components:
 ## Requirements
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.0.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 4.0, < 6.0.0 |
 | <a name="requirement_local"></a> [local](#requirement\_local) | >= 2.1 |
 
-## Providers
-
-| Name | Version |
-|------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 4.0, < 6.0.0 |
-
 ## Modules
 
 | Name | Source | Version |
-|------|--------|---------|
-| <a name="module_acm"></a> [acm](#module\_acm) | cloudposse/stack-config/yaml//modules/remote-state | 2.0.0 |
-| <a name="module_alb"></a> [alb](#module\_alb) | cloudposse/alb/aws | 2.4.0 |
-| <a name="module_dns_delegated"></a> [dns\_delegated](#module\_dns\_delegated) | cloudposse/stack-config/yaml//modules/remote-state | 2.0.0 |
+| ---- | ------ | ------- |
+| <a name="module_acm"></a> [acm](#module\_acm) | cloudposse/stack-config/yaml//modules/remote-state | 2.0.1 |
+| <a name="module_alb"></a> [alb](#module\_alb) | cloudposse/alb/aws | 2.5.0 |
+| <a name="module_dns_delegated"></a> [dns\_delegated](#module\_dns\_delegated) | cloudposse/stack-config/yaml//modules/remote-state | 2.0.1 |
 | <a name="module_iam_roles"></a> [iam\_roles](#module\_iam\_roles) | ../account-map/modules/iam-roles | n/a |
+| <a name="module_listener_target_group_label"></a> [listener\_target\_group\_label](#module\_listener\_target\_group\_label) | cloudposse/label/null | 0.25.0 |
 | <a name="module_this"></a> [this](#module\_this) | cloudposse/label/null | 0.25.0 |
-| <a name="module_vpc"></a> [vpc](#module\_vpc) | cloudposse/stack-config/yaml//modules/remote-state | 2.0.0 |
+| <a name="module_vpc"></a> [vpc](#module\_vpc) | cloudposse/stack-config/yaml//modules/remote-state | 2.0.1 |
 
 ## Resources
 
 | Name | Type |
-|------|------|
+| ---- | ---- |
+| [aws_lb_listener.listener](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_listener) | resource |
+| [aws_lb_target_group.listener](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_target_group) | resource |
+| [aws_lb_target_group_attachment.listener](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_target_group_attachment) | resource |
 | [aws_route53_record.alias](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_record) | resource |
+| [aws_security_group_rule.listener_ingress](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
+| [aws_security_group_rule.listener_ingress_security_group](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group_rule) | resource |
 | [aws_route53_zone.records](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/route53_zone) | data source |
 
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_access_logs_enabled"></a> [access\_logs\_enabled](#input\_access\_logs\_enabled) | A boolean flag to enable/disable access\_logs | `bool` | `true` | no |
 | <a name="input_access_logs_prefix"></a> [access\_logs\_prefix](#input\_access\_logs\_prefix) | The S3 log bucket prefix | `string` | `""` | no |
 | <a name="input_access_logs_s3_bucket_id"></a> [access\_logs\_s3\_bucket\_id](#input\_access\_logs\_s3\_bucket\_id) | An external S3 Bucket name to store access logs in. If specified, no logging bucket will be created. | `string` | `null` | no |
@@ -127,10 +202,12 @@ components:
 | <a name="input_attributes"></a> [attributes](#input\_attributes) | ID element. Additional attributes (e.g. `workers` or `cluster`) to add to `id`,<br/>in the order they appear in the list. New attributes are appended to the<br/>end of the list. The elements of the list are joined by the `delimiter`<br/>and treated as a single ID element. | `list(string)` | `[]` | no |
 | <a name="input_context"></a> [context](#input\_context) | Single object for setting entire context at once.<br/>See description of individual variables for details.<br/>Leave string and numeric variables as `null` to use default value.<br/>Individual variable settings (non-null) override settings in context object,<br/>except for attributes, tags, and additional\_tag\_map, which are merged. | `any` | <pre>{<br/>  "additional_tag_map": {},<br/>  "attributes": [],<br/>  "delimiter": null,<br/>  "descriptor_formats": {},<br/>  "enabled": true,<br/>  "environment": null,<br/>  "id_length_limit": null,<br/>  "label_key_case": null,<br/>  "label_order": [],<br/>  "label_value_case": null,<br/>  "labels_as_tags": [<br/>    "unset"<br/>  ],<br/>  "name": null,<br/>  "namespace": null,<br/>  "regex_replace_chars": null,<br/>  "stage": null,<br/>  "tags": {},<br/>  "tenant": null<br/>}</pre> | no |
 | <a name="input_cross_zone_load_balancing_enabled"></a> [cross\_zone\_load\_balancing\_enabled](#input\_cross\_zone\_load\_balancing\_enabled) | A boolean flag to enable/disable cross zone load balancing | `bool` | `true` | no |
+| <a name="input_default_target_group_enabled"></a> [default\_target\_group\_enabled](#input\_default\_target\_group\_enabled) | Whether the default target group should be created or not. | `bool` | `true` | no |
 | <a name="input_deletion_protection_enabled"></a> [deletion\_protection\_enabled](#input\_deletion\_protection\_enabled) | A boolean flag to enable/disable deletion protection for ALB | `bool` | `false` | no |
 | <a name="input_delimiter"></a> [delimiter](#input\_delimiter) | Delimiter to be used between ID elements.<br/>Defaults to `-` (hyphen). Set to `""` to use no delimiter at all. | `string` | `null` | no |
 | <a name="input_deregistration_delay"></a> [deregistration\_delay](#input\_deregistration\_delay) | The amount of time to wait in seconds before changing the state of a deregistering target to unused | `number` | `15` | no |
 | <a name="input_descriptor_formats"></a> [descriptor\_formats](#input\_descriptor\_formats) | Describe additional descriptors to be output in the `descriptors` output map.<br/>Map of maps. Keys are names of descriptors. Values are maps of the form<br/>`{<br/>  format = string<br/>  labels = list(string)<br/>}`<br/>(Type is `any` so the map values can later be enhanced to provide additional options.)<br/>`format` is a Terraform format string to be passed to the `format()` function.<br/>`labels` is a list of labels, in order, to pass to `format()` function.<br/>Label values will be normalized before being passed to `format()` so they will be<br/>identical to how they appear in `id`.<br/>Default is `{}` (`descriptors` output will be empty). | `any` | `{}` | no |
+| <a name="input_desync_mitigation_mode"></a> [desync\_mitigation\_mode](#input\_desync\_mitigation\_mode) | How the load balancer handles requests that might pose a security risk to an application due to HTTP desync. Valid values are `monitor`, `defensive` (default), `strictest`. | `string` | `"defensive"` | no |
 | <a name="input_dns_acm_enabled"></a> [dns\_acm\_enabled](#input\_dns\_acm\_enabled) | If `true`, use the ACM ARN created by the given `dns-delegated` component. Otherwise, use the ACM ARN created by the given `acm` component. | `bool` | `false` | no |
 | <a name="input_dns_delegated_component_name"></a> [dns\_delegated\_component\_name](#input\_dns\_delegated\_component\_name) | Atmos `dns-delegated` component name | `string` | `"dns-delegated"` | no |
 | <a name="input_dns_delegated_environment_name"></a> [dns\_delegated\_environment\_name](#input\_dns\_delegated\_environment\_name) | `dns-delegated` component environment name | `string` | `null` | no |
@@ -142,6 +219,7 @@ components:
 | <a name="input_health_check_matcher"></a> [health\_check\_matcher](#input\_health\_check\_matcher) | The HTTP response codes to indicate a healthy check | `string` | `"200-399"` | no |
 | <a name="input_health_check_path"></a> [health\_check\_path](#input\_health\_check\_path) | The destination for the health check request | `string` | `"/"` | no |
 | <a name="input_health_check_port"></a> [health\_check\_port](#input\_health\_check\_port) | The port to use for the healthcheck | `string` | `"traffic-port"` | no |
+| <a name="input_health_check_protocol"></a> [health\_check\_protocol](#input\_health\_check\_protocol) | The protocol to use for the healthcheck. If not specified, same as the traffic protocol | `string` | `null` | no |
 | <a name="input_health_check_timeout"></a> [health\_check\_timeout](#input\_health\_check\_timeout) | The amount of time to wait in seconds before failing a health check request | `number` | `10` | no |
 | <a name="input_health_check_unhealthy_threshold"></a> [health\_check\_unhealthy\_threshold](#input\_health\_check\_unhealthy\_threshold) | The number of consecutive health check failures required before considering the target unhealthy | `number` | `2` | no |
 | <a name="input_http2_enabled"></a> [http2\_enabled](#input\_http2\_enabled) | A boolean flag to enable/disable HTTP/2 | `bool` | `true` | no |
@@ -164,6 +242,9 @@ components:
 | <a name="input_label_value_case"></a> [label\_value\_case](#input\_label\_value\_case) | Controls the letter case of ID elements (labels) as included in `id`,<br/>set as tag values, and output by this module individually.<br/>Does not affect values of tags passed in via the `tags` input.<br/>Possible values: `lower`, `title`, `upper` and `none` (no transformation).<br/>Set this to `title` and set `delimiter` to `""` to yield Pascal Case IDs.<br/>Default value: `lower`. | `string` | `null` | no |
 | <a name="input_labels_as_tags"></a> [labels\_as\_tags](#input\_labels\_as\_tags) | Set of labels (ID elements) to include as tags in the `tags` output.<br/>Default is to include all labels.<br/>Tags with empty values will not be included in the `tags` output.<br/>Set to `[]` to suppress all generated tags.<br/>**Notes:**<br/>  The value of the `name` tag, if included, will be the `id`, not the `name`.<br/>  Unlike other `null-label` inputs, the initial setting of `labels_as_tags` cannot be<br/>  changed in later chained modules. Attempts to change it will be silently ignored. | `set(string)` | <pre>[<br/>  "default"<br/>]</pre> | no |
 | <a name="input_lifecycle_rule_enabled"></a> [lifecycle\_rule\_enabled](#input\_lifecycle\_rule\_enabled) | A boolean that indicates whether the s3 log bucket lifecycle rule should be enabled. | `bool` | `true` | no |
+| <a name="input_listener_https_fixed_response"></a> [listener\_https\_fixed\_response](#input\_listener\_https\_fixed\_response) | Fixed response for the HTTPS listener's default action, for example<br/>`{ content_type = "text/plain", message_body = "Not found", status_code = "404" }`.<br/>Use it with `default_target_group_enabled: false` so that only listener rules added outside the component reach a<br/>target. `null` (the default) keeps the forward to the default target group. | <pre>object({<br/>    content_type = string<br/>    message_body = string<br/>    status_code  = string<br/>  })</pre> | `null` | no |
+| <a name="input_listeners"></a> [listeners](#input\_listeners) | Additional listeners, keyed by name. Each key creates its own target group, listener and (when<br/>`ingress_cidr_blocks` or `ingress_security_group_ids` is set) security group ingress rules on the ALB, so one ALB<br/>can serve any number of ports.<br/>- `port`, `protocol`: listener port and protocol (`HTTPS` or `HTTP`, default `HTTPS`).<br/>- `certificate_arn`, `ssl_policy`: for `HTTPS` listeners; default to the component's certificate and `https_ssl_policy`.<br/>- `target_port`, `target_protocol`, `target_protocol_version`: target group settings; port and protocol default to the listener's.<br/>- `target_type`, `deregistration_delay`: default to `target_group_target_type` and `deregistration_delay`.<br/>- `ingress_cidr_blocks`: CIDRs allowed to reach this listener on the ALB security group.<br/>- `ingress_security_group_ids`: security groups allowed to reach this listener (one rule per group). For example the<br/>  security group of a Network Load Balancer that forwards to this ALB: an `alb`-type target group preserves the<br/>  client IP, so a rule referencing the NLB's security group admits both client traffic and health checks.<br/>- `health_check`: target group health check; `protocol` defaults to the target protocol.<br/>- `targets`: targets to register (`id` is an instance ID, IP address or Lambda ARN depending on `target_type`; `port` defaults to the target port). | <pre>map(object({<br/>    port                       = number<br/>    protocol                   = optional(string, "HTTPS")<br/>    certificate_arn            = optional(string)<br/>    ssl_policy                 = optional(string)<br/>    target_port                = optional(number)<br/>    target_protocol            = optional(string)<br/>    target_protocol_version    = optional(string, "HTTP1")<br/>    target_type                = optional(string)<br/>    deregistration_delay       = optional(number)<br/>    ingress_cidr_blocks        = optional(list(string), [])<br/>    ingress_security_group_ids = optional(list(string), [])<br/>    health_check = optional(object({<br/>      enabled             = optional(bool, true)<br/>      path                = optional(string, "/")<br/>      port                = optional(string, "traffic-port")<br/>      protocol            = optional(string)<br/>      matcher             = optional(string, "200-399")<br/>      healthy_threshold   = optional(number, 2)<br/>      unhealthy_threshold = optional(number, 2)<br/>      interval            = optional(number, 15)<br/>      timeout             = optional(number, 10)<br/>    }), {})<br/>    targets = optional(list(object({<br/>      id   = string<br/>      port = optional(number)<br/>    })), [])<br/>  }))</pre> | `{}` | no |
+| <a name="input_load_balancing_algorithm_type"></a> [load\_balancing\_algorithm\_type](#input\_load\_balancing\_algorithm\_type) | Determines how the load balancer selects targets when routing requests. Only applicable for Application Load Balancer Target Groups | `string` | `"round_robin"` | no |
 | <a name="input_name"></a> [name](#input\_name) | ID element. Usually the component or solution name, e.g. 'app' or 'jenkins'.<br/>This is the only ID element not also included as a `tag`.<br/>The "name" tag is set to the full `id` string. There is no tag with the value of the `name` input. | `string` | `null` | no |
 | <a name="input_namespace"></a> [namespace](#input\_namespace) | ID element. Usually an abbreviation of your organization name, e.g. 'eg' or 'cp', to help ensure generated IDs are globally unique | `string` | `null` | no |
 | <a name="input_regex_replace_chars"></a> [regex\_replace\_chars](#input\_regex\_replace\_chars) | Terraform regular expression (regex) string.<br/>Characters matching the regex will be removed from the ID elements.<br/>If not set, `"/[^a-zA-Z0-9-]/"` is used to remove all characters other than hyphens, letters and digits. | `string` | `null` | no |
@@ -172,10 +253,12 @@ components:
 | <a name="input_route53_zone_name"></a> [route53\_zone\_name](#input\_route53\_zone\_name) | The name of the Route53 hosted zone in which to create alias records. Required when `route53_record_names` is non-empty. | `string` | `null` | no |
 | <a name="input_stage"></a> [stage](#input\_stage) | ID element. Usually used to indicate role, e.g. 'prod', 'staging', 'source', 'build', 'test', 'deploy', 'release' | `string` | `null` | no |
 | <a name="input_stickiness"></a> [stickiness](#input\_stickiness) | Target group sticky configuration | <pre>object({<br/>    cookie_duration = number<br/>    enabled         = bool<br/>  })</pre> | `null` | no |
+| <a name="input_subnet_type"></a> [subnet\_type](#input\_subnet\_type) | Which subnets of the `vpc` component the ALB is placed in: `public` or `private`.<br/>Use `private` together with `internal = true` for an ALB that is reached only from inside the VPC<br/>(for example behind a Network Load Balancer). Changing this replaces the ALB. | `string` | `"public"` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Additional tags (e.g. `{'BusinessUnit': 'XYZ'}`).<br/>Neither the tag keys nor the tag values will be modified by this module. | `map(string)` | `{}` | no |
 | <a name="input_target_group_name"></a> [target\_group\_name](#input\_target\_group\_name) | The name for the default target group, uses a module label name if left empty | `string` | `""` | no |
 | <a name="input_target_group_port"></a> [target\_group\_port](#input\_target\_group\_port) | The port for the default target group | `number` | `80` | no |
 | <a name="input_target_group_protocol"></a> [target\_group\_protocol](#input\_target\_group\_protocol) | The protocol for the default target group HTTP or HTTPS | `string` | `"HTTP"` | no |
+| <a name="input_target_group_protocol_version"></a> [target\_group\_protocol\_version](#input\_target\_group\_protocol\_version) | The protocol version for the default target group. One of `HTTP1`, `HTTP2`, `GRPC`. | `string` | `"HTTP1"` | no |
 | <a name="input_target_group_target_type"></a> [target\_group\_target\_type](#input\_target\_group\_target\_type) | The type (`instance`, `ip` or `lambda`) of targets that can be registered with the target group | `string` | `"ip"` | no |
 | <a name="input_tenant"></a> [tenant](#input\_tenant) | ID element \_(Rarely used, not included by default)\_. A customer identifier, indicating who this instance of a resource is for | `string` | `null` | no |
 | <a name="input_vpc_component_name"></a> [vpc\_component\_name](#input\_vpc\_component\_name) | Atmos `vpc` component name | `string` | `"vpc"` | no |
@@ -183,7 +266,7 @@ components:
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
 | <a name="output_access_logs_bucket_id"></a> [access\_logs\_bucket\_id](#output\_access\_logs\_bucket\_id) | The S3 bucket ID for access logs |
 | <a name="output_alb_arn"></a> [alb\_arn](#output\_alb\_arn) | The ARN of the ALB |
 | <a name="output_alb_arn_suffix"></a> [alb\_arn\_suffix](#output\_alb\_arn\_suffix) | The ARN suffix of the ALB |
@@ -196,6 +279,7 @@ components:
 | <a name="output_http_redirect_listener_arn"></a> [http\_redirect\_listener\_arn](#output\_http\_redirect\_listener\_arn) | The ARN of the HTTP to HTTPS redirect listener |
 | <a name="output_https_listener_arn"></a> [https\_listener\_arn](#output\_https\_listener\_arn) | The ARN of the HTTPS listener |
 | <a name="output_listener_arns"></a> [listener\_arns](#output\_listener\_arns) | A list of all the listener ARNs |
+| <a name="output_listeners"></a> [listeners](#output\_listeners) | Additional listeners created from `var.listeners`, keyed like the input |
 | <a name="output_security_group_id"></a> [security\_group\_id](#output\_security\_group\_id) | The security group ID of the ALB |
 <!-- markdownlint-restore -->
 
